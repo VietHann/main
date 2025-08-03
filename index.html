@@ -1,380 +1,600 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Route Manager - LVV-Hub Main</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>Immersive 3D Experience</title>
     <style>
-        .tooltip {
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.3s;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .tooltip-trigger:hover .tooltip {
-            visibility: visible;
-            opacity: 1;
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
         }
-        .dark .bg-white { background-color: #1f2937; }
-        .dark .text-gray-900 { color: #f9fafb; }
-        .dark .text-gray-600 { color: #d1d5db; }
-        .dark .border-gray-200 { border-color: #374151; }
-        .dark .bg-gray-50 { background-color: #111827; }
+
+        /* Canvas Container */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* UI Overlay */
+        .ui-overlay {
+            position: relative;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 40px;
+            backdrop-filter: blur(20px);
+            background: rgba(10, 10, 10, 0.3);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+            z-index: 100;
+            pointer-events: all;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+        }
+
+        /* Content Sections */
+        .content {
+            position: relative;
+            z-index: 10;
+            min-height: 400vh;
+        }
+
+        .section {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 40px;
+            pointer-events: all;
+        }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 60px rgba(0, 255, 255, 0.1);
+            border-color: rgba(0, 255, 255, 0.3);
+        }
+
+        .card-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .card-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.8);
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px 20px;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .section {
+                padding: 0 20px;
+            }
+            
+            .glass-card {
+                padding: 30px 20px;
+            }
+            
+            .card-title {
+                font-size: 2rem;
+            }
+        }
+
+        /* Loading Screen */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 1s ease;
+        }
+
+        .loading-text {
+            font-size: 1.5rem;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen transition-colors duration-300">
-    <!-- Header -->
-    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <!-- Logo -->
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <h1 class="text-2xl font-bold text-blue-600">
-                            <i class="fas fa-hub-spot mr-2"></i>LVV-Hub Main
-                        </h1>
-                    </div>
-                </div>
-                
-                <!-- Navigation -->
-                <div class="hidden md:block">
-                    <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="#" class="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            <i class="fas fa-home mr-1"></i>Trang chính
-                        </a>
-                        <a href="#" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            <i class="fas fa-book mr-1"></i>Tài liệu hệ thống
-                        </a>
-                        <a href="#" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            <i class="fab fa-github mr-1"></i>GitHub Repo
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Dark Mode Toggle -->
-                <div class="flex items-center">
-                    <button id="darkModeToggle" class="p-2 rounded-md text-gray-600 hover:text-blue-600 hover:bg-gray-100 transition-colors">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    <!-- Mobile menu button -->
-                    <button id="mobileMenuBtn" class="md:hidden ml-2 p-2 rounded-md text-gray-600 hover:text-blue-600 hover:bg-gray-100">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Mobile menu -->
-        <div id="mobileMenu" class="md:hidden hidden bg-white border-t border-gray-200">
-            <div class="px-2 pt-2 pb-3 space-y-1">
-                <a href="#" class="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium">
-                    <i class="fas fa-home mr-2"></i>Trang chính
-                </a>
-                <a href="#" class="text-gray-600 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium">
-                    <i class="fas fa-book mr-2"></i>Tài liệu hệ thống
-                </a>
-                <a href="#" class="text-gray-600 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium">
-                    <i class="fab fa-github mr-2"></i>GitHub Repo
-                </a>
-            </div>
-        </div>
-    </nav>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+        <div class="loading-text">Loading Experience...</div>
+    </div>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <!-- Dashboard Header -->
-        <div class="mb-8">
-            <h1 class="text-4xl font-bold text-gray-900 mb-4">
-                <i class="fas fa-route text-blue-600 mr-3"></i>Route Management Hub
-            </h1>
-            <p class="text-lg text-gray-600 max-w-3xl">
-                Trang điều phối các route chính trong hệ thống LVV-Hub. Chọn mục cần điều hướng hoặc kiểm tra trạng thái các dịch vụ.
-            </p>
-        </div>
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container"></div>
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center">
-                    <div class="p-2 bg-green-100 rounded-lg">
-                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Online</p>
-                        <p class="text-2xl font-bold text-gray-900" id="onlineCount">5</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center">
-                    <div class="p-2 bg-yellow-100 rounded-lg">
-                        <i class="fas fa-tools text-yellow-600 text-xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Đang phát triển</p>
-                        <p class="text-2xl font-bold text-gray-900" id="devCount">2</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center">
-                    <div class="p-2 bg-red-100 rounded-lg">
-                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Bảo trì</p>
-                        <p class="text-2xl font-bold text-gray-900" id="maintenanceCount">1</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center">
-                    <div class="p-2 bg-blue-100 rounded-lg">
-                        <i class="fas fa-server text-blue-600 text-xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Tổng Routes</p>
-                        <p class="text-2xl font-bold text-gray-900" id="totalCount">8</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- UI Overlay -->
+    <div class="ui-overlay">
+        <!-- Header -->
+        <header class="header">
+            <nav class="nav">
+                <div class="logo">NEXUS</div>
+                <ul class="nav-links">
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </nav>
+        </header>
 
-        <!-- Routes Table -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-xl font-semibold text-gray-900">
-                    <i class="fas fa-list mr-2"></i>Danh sách Routes
-                </h2>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Route</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đường dẫn</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mô tả</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200" id="routesTable">
-                        <!-- Routes will be populated by JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <!-- Content Sections -->
+        <div class="content">
+            <section class="section" id="home">
+                <div class="glass-card">
+                    <h1 class="card-title">Welcome to the Future</h1>
+                    <p class="card-text">Experience the next generation of web technology with immersive 3D environments and cutting-edge design.</p>
+                </div>
+            </section>
 
-        <!-- Quick Actions -->
-        <div class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                <i class="fas fa-bolt text-yellow-500 mr-2"></i>Thao tác nhanh
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button class="flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Thêm Route mới
-                </button>
-                <button class="flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                    <i class="fas fa-sync mr-2"></i>Kiểm tra tất cả
-                </button>
-                <button class="flex items-center justify-center px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                    <i class="fas fa-download mr-2"></i>Xuất báo cáo
-                </button>
-            </div>
+            <section class="section" id="about">
+                <div class="glass-card">
+                    <h2 class="card-title">Immersive Technology</h2>
+                    <p class="card-text">Powered by advanced Three.js rendering and real-time particle systems that respond to your every interaction.</p>
+                </div>
+            </section>
+
+            <section class="section" id="services">
+                <div class="glass-card">
+                    <h2 class="card-title">Interactive Experience</h2>
+                    <p class="card-text">Navigate through floating holographic elements and watch as the environment transforms around you.</p>
+                </div>
+            </section>
+
+            <section class="section" id="contact">
+                <div class="glass-card">
+                    <h2 class="card-title">Join the Revolution</h2>
+                    <p class="card-text">Step into tomorrow with our revolutionary 3D web experiences that blur the line between reality and digital.</p>
+                </div>
+            </section>
         </div>
-    </main>
+    </div>
+
+    <!-- Three.js and GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 
     <script>
-        // Routes data
-        const routes = [
-            {
-                name: 'Blog',
-                path: 'lvv-hub.com',
-                description: 'Trang blog cá nhân',
-                status: 'online',
-                icon: 'fas fa-blog'
-            },
-            {
-                name: 'Projects',
-                path: 'lvv-hub.com',
-                description: 'Dự án AI đã thực hiện',
-                status: 'online',
-                icon: 'fas fa-project-diagram'
-            },
-            {
-                name: 'TTS Web',
-                path: 'lvv-hub.com',
-                description: 'Chuyển văn bản thành giọng nói',
-                status: 'dev',
-                icon: 'fas fa-volume-up'
-            },
-            {
-                name: 'STT API',
-                path: 'lvv-hub.com',
-                description: 'API chuyển giọng nói thành văn bản',
-                status: 'online',
-                icon: 'fas fa-microphone'
-            },
-            {
-                name: 'API Docs',
-                path: 'lvv-hub.com',
-                description: 'Swagger UI cho API hệ thống',
-                status: 'online',
-                icon: 'fas fa-file-code'
-            },
-            {
-                name: 'Admin Panel',
-                path: 'lvv-hub.com',
-                description: 'Bảng điều khiển quản trị',
-                status: 'online',
-                icon: 'fas fa-cog'
-            },
-            {
-                name: 'File Storage',
-                path: 'lvv-hub.com',
-                description: 'Hệ thống lưu trữ file',
-                status: 'maintenance',
-                icon: 'fas fa-cloud'
-            },
-            {
-                name: 'Analytics',
-                path: 'lvv-hub.com',
-                description: 'Thống kê và phân tích',
-                status: 'dev',
-                icon: 'fas fa-chart-bar'
-            }
-        ];
-
-        // Status configurations
-        const statusConfig = {
-            online: {
-                icon: 'fas fa-check-circle',
-                color: 'text-green-600',
-                bg: 'bg-green-100',
-                text: 'Online',
-                tooltip: 'Dịch vụ đang hoạt động bình thường'
-            },
-            dev: {
-                icon: 'fas fa-tools',
-                color: 'text-yellow-600',
-                bg: 'bg-yellow-100',
-                text: 'Đang phát triển',
-                tooltip: 'Dịch vụ đang trong quá trình phát triển'
-            },
-            maintenance: {
-                icon: 'fas fa-exclamation-triangle',
-                color: 'text-red-600',
-                bg: 'bg-red-100',
-                text: 'Bảo trì',
-                tooltip: 'Dịch vụ đang được bảo trì'
-            }
-        };
-
-        // Populate routes table
-        function populateRoutesTable() {
-            const tableBody = document.getElementById('routesTable');
-            tableBody.innerHTML = '';
-
-            routes.forEach(route => {
-                const status = statusConfig[route.status];
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50 transition-colors';
+        // Scene Setup
+        class ImmersiveScene {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.clock = new THREE.Clock();
+                this.mouse = new THREE.Vector2();
+                this.raycaster = new THREE.Raycaster();
                 
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 h-8 w-8">
-                                <div class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                                    <i class="${route.icon} text-blue-600 text-sm"></i>
-                                </div>
-                            </div>
-                            <div class="ml-3">
-                                <div class="text-sm font-medium text-gray-900">${route.name}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <a href="https://${route.path}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-mono">
-                            ${route.path}
-                            <i class="fas fa-external-link-alt ml-1 text-xs"></i>
-                        </a>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="text-sm text-gray-900">${route.description}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="tooltip-trigger relative">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.color}">
-                                <i class="${status.icon} mr-1"></i>
-                                ${status.text}
-                            </span>
-                            <div class="tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap">
-                                ${status.tooltip}
-                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="checkRoute('${route.path}')">
-                            <i class="fas fa-sync"></i>
-                        </button>
-                        <button class="text-gray-600 hover:text-gray-900">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </td>
-                `;
+                this.particles = [];
+                this.floatingObjects = [];
+                this.centralCube = null;
                 
-                tableBody.appendChild(row);
+                this.init();
+                this.createLighting();
+                this.createParticles();
+                this.createFloatingObjects();
+                this.createCentralCube();
+                this.setupPostProcessing();
+                this.setupEventListeners();
+                this.setupScrollAnimations();
+                this.animate();
+            }
+
+            init() {
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.setClearColor(0x0a0a0a, 1);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+                
+                this.camera.position.set(0, 0, 10);
+                this.scene.fog = new THREE.Fog(0x0a0a0a, 10, 50);
+            }
+
+            createLighting() {
+                // Ambient light
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+                this.scene.add(ambientLight);
+
+                // Point lights for neon effect
+                const light1 = new THREE.PointLight(0x00ffff, 2, 30);
+                light1.position.set(10, 10, 10);
+                this.scene.add(light1);
+
+                const light2 = new THREE.PointLight(0xff00ff, 2, 30);
+                light2.position.set(-10, -10, 10);
+                this.scene.add(light2);
+
+                const light3 = new THREE.PointLight(0xffff00, 1.5, 25);
+                light3.position.set(0, 15, -10);
+                this.scene.add(light3);
+            }
+
+            createParticles() {
+                const particleCount = 2000;
+                const positions = new Float32Array(particleCount * 3);
+                const colors = new Float32Array(particleCount * 3);
+                const sizes = new Float32Array(particleCount);
+
+                for (let i = 0; i < particleCount; i++) {
+                    positions[i * 3] = (Math.random() - 0.5) * 100;
+                    positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+                    positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+
+                    const color = new THREE.Color();
+                    color.setHSL(Math.random() * 0.3 + 0.5, 1, 0.5);
+                    colors[i * 3] = color.r;
+                    colors[i * 3 + 1] = color.g;
+                    colors[i * 3 + 2] = color.b;
+
+                    sizes[i] = Math.random() * 3 + 1;
+                }
+
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+                const material = new THREE.ShaderMaterial({
+                    uniforms: {
+                        time: { value: 0 }
+                    },
+                    vertexShader: `
+                        attribute float size;
+                        attribute vec3 color;
+                        varying vec3 vColor;
+                        uniform float time;
+                        
+                        void main() {
+                            vColor = color;
+                            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                            gl_PointSize = size * (300.0 / -mvPosition.z) * (1.0 + sin(time + position.x * 0.01) * 0.3);
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                    `,
+                    fragmentShader: `
+                        varying vec3 vColor;
+                        
+                        void main() {
+                            float distance = length(gl_PointCoord - vec2(0.5));
+                            if (distance > 0.5) discard;
+                            
+                            float alpha = 1.0 - distance * 2.0;
+                            gl_FragColor = vec4(vColor, alpha * 0.8);
+                        }
+                    `,
+                    transparent: true,
+                    vertexColors: true,
+                    blending: THREE.AdditiveBlending
+                });
+
+                this.particles = new THREE.Points(geometry, material);
+                this.scene.add(this.particles);
+            }
+
+            createFloatingObjects() {
+                // Floating cubes
+                for (let i = 0; i < 8; i++) {
+                    const geometry = new THREE.BoxGeometry(1, 1, 1);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: new THREE.Color().setHSL(Math.random(), 1, 0.5),
+                        transparent: true,
+                        opacity: 0.7,
+                        emissive: new THREE.Color().setHSL(Math.random(), 1, 0.2)
+                    });
+                    
+                    const cube = new THREE.Mesh(geometry, material);
+                    cube.position.set(
+                        (Math.random() - 0.5) * 30,
+                        (Math.random() - 0.5) * 20,
+                        (Math.random() - 0.5) * 20
+                    );
+                    cube.rotation.set(
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI
+                    );
+                    
+                    this.floatingObjects.push(cube);
+                    this.scene.add(cube);
+                }
+
+                // Floating spheres
+                for (let i = 0; i < 6; i++) {
+                    const geometry = new THREE.SphereGeometry(0.8, 16, 16);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: new THREE.Color().setHSL(Math.random(), 1, 0.5),
+                        transparent: true,
+                        opacity: 0.6,
+                        emissive: new THREE.Color().setHSL(Math.random(), 1, 0.3),
+                        wireframe: Math.random() > 0.5
+                    });
+                    
+                    const sphere = new THREE.Mesh(geometry, material);
+                    sphere.position.set(
+                        (Math.random() - 0.5) * 25,
+                        (Math.random() - 0.5) * 15,
+                        (Math.random() - 0.5) * 15
+                    );
+                    
+                    this.floatingObjects.push(sphere);
+                    this.scene.add(sphere);
+                }
+            }
+
+            createCentralCube() {
+                const geometry = new THREE.BoxGeometry(3, 3, 3);
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 0.8,
+                    emissive: 0x004444,
+                    wireframe: true
+                });
+                
+                this.centralCube = new THREE.Mesh(geometry, material);
+                this.centralCube.position.set(0, 0, 0);
+                this.scene.add(this.centralCube);
+
+                // Add inner cube
+                const innerGeometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+                const innerMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xff00ff,
+                    transparent: true,
+                    opacity: 0.6,
+                    emissive: 0x440044
+                });
+                
+                const innerCube = new THREE.Mesh(innerGeometry, innerMaterial);
+                this.centralCube.add(innerCube);
+            }
+
+            setupPostProcessing() {
+                // Basic bloom effect simulation with fog and lighting
+                this.renderer.toneMappingExposure = 1.2;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => this.onWindowResize());
+                window.addEventListener('mousemove', (event) => this.onMouseMove(event));
+                
+                // Touch events for mobile
+                window.addEventListener('touchmove', (event) => {
+                    if (event.touches.length > 0) {
+                        this.onMouseMove(event.touches[0]);
+                    }
+                });
+            }
+
+            setupScrollAnimations() {
+                gsap.registerPlugin(ScrollTrigger);
+
+                // Camera movement on scroll
+                gsap.to(this.camera.position, {
+                    scrollTrigger: {
+                        trigger: ".content",
+                        start: "top top",
+                        end: "bottom bottom",
+                        scrub: 1
+                    },
+                    z: 5,
+                    y: -5,
+                    ease: "none"
+                });
+
+                // Rotate central cube on scroll
+                gsap.to(this.centralCube.rotation, {
+                    scrollTrigger: {
+                        trigger: ".content",
+                        start: "top top",
+                        end: "bottom bottom",
+                        scrub: 1
+                    },
+                    y: Math.PI * 4,
+                    x: Math.PI * 2,
+                    ease: "none"
+                });
+
+                // Animate floating objects
+                this.floatingObjects.forEach((obj, index) => {
+                    gsap.to(obj.position, {
+                        scrollTrigger: {
+                            trigger: ".content",
+                            start: "top top",
+                            end: "bottom bottom",
+                            scrub: 1
+                        },
+                        x: obj.position.x + (Math.random() - 0.5) * 20,
+                        y: obj.position.y + (Math.random() - 0.5) * 15,
+                        z: obj.position.z + (Math.random() - 0.5) * 10,
+                        ease: "none"
+                    });
+
+                    gsap.to(obj.rotation, {
+                        scrollTrigger: {
+                            trigger: ".content",
+                            start: "top top",
+                            end: "bottom bottom",
+                            scrub: 1
+                        },
+                        x: Math.PI * 2 * (index % 2 === 0 ? 1 : -1),
+                        y: Math.PI * 3 * (index % 3 === 0 ? 1 : -1),
+                        ease: "none"
+                    });
+                });
+            }
+
+            onMouseMove(event) {
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                // Subtle camera movement based on mouse
+                gsap.to(this.camera.position, {
+                    x: this.mouse.x * 2,
+                    y: this.mouse.y * 1,
+                    duration: 2,
+                    ease: "power2.out"
+                });
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+
+                const elapsedTime = this.clock.getElapsedTime();
+
+                // Update particle shader
+                if (this.particles.material.uniforms) {
+                    this.particles.material.uniforms.time.value = elapsedTime;
+                }
+
+                // Rotate particles
+                this.particles.rotation.y = elapsedTime * 0.05;
+                this.particles.rotation.x = elapsedTime * 0.02;
+
+                // Animate floating objects
+                this.floatingObjects.forEach((obj, index) => {
+                    obj.rotation.x += 0.01 * (index % 2 === 0 ? 1 : -1);
+                    obj.rotation.y += 0.015 * (index % 3 === 0 ? 1 : -1);
+                    obj.position.y += Math.sin(elapsedTime + index) * 0.01;
+                });
+
+                // Animate central cube
+                if (this.centralCube) {
+                    this.centralCube.rotation.x += 0.005;
+                    this.centralCube.rotation.y += 0.01;
+                    this.centralCube.children[0].rotation.x -= 0.02;
+                    this.centralCube.children[0].rotation.y -= 0.015;
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Initialize the scene
+        let scene;
+        
+        window.addEventListener('load', () => {
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loading').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                }, 1000);
+            }, 2000);
+
+            // Initialize 3D scene
+            scene = new ImmersiveScene();
+        });
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }
             });
-
-            updateStats();
-        }
-
-        // Update statistics
-        function updateStats() {
-            const stats = routes.reduce((acc, route) => {
-                acc[route.status] = (acc[route.status] || 0) + 1;
-                return acc;
-            }, {});
-
-            document.getElementById('onlineCount').textContent = stats.online || 0;
-            document.getElementById('devCount').textContent = stats.dev || 0;
-            document.getElementById('maintenanceCount').textContent = stats.maintenance || 0;
-            document.getElementById('totalCount').textContent = routes.length;
-        }
-
-        // Check route function
-        function checkRoute(path) {
-            alert(`Đang kiểm tra trạng thái của ${path}...`);
-        }
-
-        // Dark mode toggle
-        const darkModeToggle = document.getElementById('darkModeToggle');
-        const body = document.body;
-
-        darkModeToggle.addEventListener('click', () => {
-            body.classList.toggle('dark');
-            const isDark = body.classList.contains('dark');
-            darkModeToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-        });
-
-        // Mobile menu toggle
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const mobileMenu = document.getElementById('mobileMenu');
-
-        mobileMenuBtn.addEventListener('click', () => {
-            mobileMenu.classList.toggle('hidden');
-        });
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            populateRoutesTable();
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'967e5decf750e6c6',t:'MTc1Mzk3ODIzNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9697b09755815ded',t:'MTc1NDI0Mzc2Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
